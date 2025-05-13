@@ -1,0 +1,8 @@
+*Button.foreground: red
+*Button.width:20
+*Label.foreground: blue
+*labelBonjour.text: ENIB : CAI 2023 P
+*labelBonjour.foreground: green
+*Label.background: light yellow
+*Label.relief: raised
+

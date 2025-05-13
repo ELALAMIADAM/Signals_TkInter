@@ -1,0 +1,170 @@
+Objectifs
+=========
+L'objectif de ce labo est de réaliser une IHM pour visualiser, contrôler et sauvegarder 
+les données  de modèles de mouvement vibratoire harmonique.
+
+L'implémentation de cette IHM repose sur la mise en oeuvre des bonnes pratiques de programmation 
+basées sur les patrons de conception (Observer, MVC) afin de séparer le développement du modèle de sa visualisation et de son contrôle.
+
+Cette application sera réalisée en utilisant la bibliothèque TkInter, bibliothèque graphique de base en Python.
+
+En début de seance
+==================
+Faire une copie du sujet de labos :  /home/TP/modules/sujets/CAI/TkInter/Labos/
+sous un de vos repertoires utilisateur (répertoire courant "." ) : 
+--> cp -r  /home/TP/modules/sujets/CAI/TkInter/Labos/ .
+
+Test : observer.py
+------------------
+1) Tester le bon fonctionnement du modèle Observer (class Observer, class Subject):
+--> python observer.py
+Vérifier que les affichages de message (print) sont ceux du programme de test ("__main__").
+
+2)Décommenter les appels de notify() dans les méthodes de la classe Subject, re-tester :
+--> python observer.py
+Vérifier que les appels de la méthode update() des "observers" est bien exécuté 
+
+3)Pour tester l'ensemble des appels de méthodes de ce programme de test, modifier la variable  "DEBUG" 
+--> python observer.py
+
+Test : model.py (class Generator) 
+---------------------------------
+1) Tester l'implémentation du modèle (class Generator) pour le calcul des élongations d'un mouvement vibratoire harmonique)
+--> python models.py
+........
+Erreur (sqlite3.OperationalError: no such table: signals)
+
+2) Corriger l'erreur en sauvegardant les données du modèle dans une base (signals.db).
+Pour créer la base  de données on utilisera le fichier :
+- signals_create.sql : création des tables (signals,samples) 
+
+--> sqlite3 signals.db
+sqlite> .read signals_create.sql
+sqlite> .exit
+
+3) Tester à nouveau l'implémentation du modèle 
+--> python models.py
+
+4) vérifier l'état de la base de données en exécutant des requêtes.
+Pour tester des requêtes sur  la base  de données on utilisera le fichier :
+- signals_queries.sql : recherche d'information sur la base de données
+
+--> sqlite3 signals.db
+sqlite> .read signals_queries.sql
+...
+signal_id  frequency  x    y                    
+---------  ---------  ---  ---
+X          1.0        0    0                    
+...
+sqlite> .exit
+
+5) Changer la fréquence et le nombre d'échantillons dans l'application de test du script models.py.
+Modifier le code de l'application de test pour mettre à jour les données du modèle dans la base.
+
+Tester à nouveau l'implémentation du modèle 
+--> python models.py
+Vérifier  à nouveau l'état de la base de données
+--> sqlite3 signals.db
+sqlite> .read signals_queries.sql
+Visualiser les données du signal stocké dans la base sous matplotlib :
+--> python signals_plot.py
+
+Test : views.py (class Screen) 
+------------------------------
+1) Tester l'implémentation de la Vue (class Screen) pour visualiser les données du modèle
+--> python views.py
+
+2) Pour visualiser le signal, mettre en place le patron de conception "Observer" entre un modèle (Generator) et une vue (Screen) associée lorsque le modele génère un signal.
+Tester à nouveau :
+--> python views.py
+
+3) Lors du redimensionnement de la fenêtre : gérer le rafraîchissement de la grille et du signal
+Tester à nouveau :
+--> python views.py
+
+4) Créer une deuxième vue sur le modèle dans une fenêtre secondaire
+Tester à nouveau :
+--> python views.py
+
+Test : controllers.py (class Control) 
+------------------------------------
+1) Tester l'implémentation du contrôleur (class COntrol) pour modifier les données du modèle
+--> python controllers.py
+2) Mettre en place la mise à jour du signal lorsque l'utilisateur agit sur le contrôleur de fréquence.
+Tester à nouveau :
+--> python views.py
+
+Test  : main.py
+---------------
+1) Vérifier le bon fonctionnement de l'application qui utilise les 3 classes précédentes.
+--> python main.py
+
+Le programme principal intègre une barre de menu qui contient deux menus  ("File", "Help").
+Les actions utilisateur dans ce menu permettront de gérer :
+  - menu "File" : 
+      o chargement de signaux (boîte de dialogue pour charger un signal)
+      o sauvegarde de signaux (boîte de dialogue pour sauvegarder un signal) 
+      o sortie d'application (boîte de dialogue d'avertissement avant sortie )
+  - menu "Help" : 
+      o informations sur les concepteurs de l'application (boîte de dialogue d'information) 
+      o informations sur le langage utilisé pour développer l'application  (boîte de dialogue d'information)
+      o informations sur la bibliothèque graphique pour faire les développements (boîte de dialogue d'information)
+
+Développement de l'application
+==============================
+
+Premiere étape : paramétrage d'un signal
+----------------------------------------
+Affichage et contrôle d'un signal ("X") dans l'application  :
+
+Lorsque le contrôle de la fréquence du signal ("X") est maîtrisé en suivant les patrons de conception,
+
+1) ajouter les contrôleurs (de type Scale) en :
+   - amplitude, phase, nombre d'échantillons du signal
+2) choisir des composants graphiques pour paramétrer le contrôle du nombre d'harmoniques 
+3) choisir des composants graphiques pour sélectionner Les harmoniques paires, impaires 
+4) réagencer automatiquement les composants graphiques en cas de retaillage de la fenetre
+5) configurer l'IHM (couleur,texte, positionnement des sliders ...) dans un fichier d'options (main.opt)
+6) mettre en place une animation (after()) de spot correspondant aux élongations du signal sur le nombre d'échantillons
+
+Deuxième étape : sauvegarde, chargement d'un signal
+---------------------------------------------------
+1) modifier les tables de la base de données pour sauvegarder les caractéristiques du signal (table signals) et les valeurs d'échantillons (table samples).
+2) faire une sauvegarde "en dur" (sans acion utilisateur) du signal présent dans le code de l'application
+3) vérifier l'état de la base de données
+4) faire un chargement "en dur"  (sans acion utilisateur) dans le code de l'application du signal précédemment sauvegardé
+5) vérifier la visualisation correcte du chargement
+6) mettre en place les actions utilisateurs dans le menu "File" pour charger et sauvegarder les données du modèle
+7) mettre en place les actions utilisateurs dans le menu  "Help" de l'application ppour afficher les informations dans des boîtes de dialogue.
+ 
+Troisième étape : ajout d'un signal
+----------------------------------
+1) ajouter un deuxième signal ("Y") avec ses contrôleurs dans l'application
+2) créer une fenêtre secondaire pour visualiser le mode "X-Y" sur les deux signaux
+3) mettre en place un composant graphique pour faire apparaître/disparaître la vue secondaire
+
+Archivage
+=========
+A chaque fin de séance, lancer le script shell
+--> ./send_TkInter.sh 
+pour générer automatiquement l'archive de votre projet, nommée avec vos noms de binômes (Dupond,Dupont)
+--> Dupond_Dupont_TkInter.tgz
+Ce script déposera automatiquement l'archive sous le repertoire :
+--> /home/TP/TPrendu/nedelec/CAI/TkInter
+
+Attention
+---------
+Cette archive devra contenir simplement les fichiers nécessaires à l'application :
+  - controllers.py      : classe Controller du modèle MVC
+  - main.opt            : fichier de configuration d'options (propriétés des widgets)
+  - main.py             : application principale (le point d'entrée pour tester votre travail)
+  - models.py           : classe Generator du modèle MVC
+  - observer.py         : classes (Observer, Subject) du  modèle Observer
+  - send_TkInter.sh     : script shelle pour déposer l'archive de taravail en fn de séance
+  - signals_create.sql  : la création des tables dans la base de données
+  - signals.db          : la base de données
+  - signals_plot.py     : visualisation de signaux stockés dans la base de données
+  - signals_queries.sql : les requêtes de tests sur la base de donnée
+  - TODO.txt            : ce fichier en cours de lecture !
+  - views.py            : classe Screen du modèle MVC
+  - Tests               : programmes de tests utiles  pour developper l'application
