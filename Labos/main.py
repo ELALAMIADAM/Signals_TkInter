@@ -81,7 +81,7 @@ def save_action():
  
         
         # Commit the changes
-        
+
         conn.commit()
         print("Data updated and inserted successfully.")
     
@@ -99,7 +99,7 @@ def open_action() :
 def on_help_actions(name):
     print("on_help_actions()")
     if  name=="About Us" :
-        tk.messagebox.showinfo(title=name, message="Contacts",detail="dupond@enib.fr, durand@enib.fr")
+        tk.messagebox.showinfo(title=name, message="Contacts",detail="a3elalam@enib.fr, m2mohama@enib.fr")
     elif name=="About Application" :
         print(name)
     elif  name=="About TkInter" :
