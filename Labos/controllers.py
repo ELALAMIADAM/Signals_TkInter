@@ -39,11 +39,14 @@ class Control :
         self.scale_magn=tk.Scale(self.frame,variable=self.magn,
                              label="Magnitude",
                              orient="horizontal",length=250,
-                             from_=0,to=11,tickinterval=100)
+                             from_=0,to=100,tickinterval=10
+                            #  ,resolution=0.1
+                             )
     def on_magnitude_action(self,event):
         if  self.model.get_magnitude() != self.magn.get() :
             self.model.set_magnitude(self.magn.get())
-            self.model.generate()     
+            self.model.generate()
+            print("magnitude : ",self.magn.get())     
         # Samples
 
     def scale_samples(self) :

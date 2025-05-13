@@ -23,6 +23,8 @@ def menu_file(menubar) :
     menu=tk.Menu(menubar)
     item="Open"
     menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
+    item="Save"
+    menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
     item="Exit"
     menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
     menubar.add_cascade(label="File",menu=menu)
@@ -42,11 +44,55 @@ def on_file_actions(name):
     print("on_file_actions()")
     if  name=="Open" :
         open_action()
+    elif  name=="Save" :
+        save_action()
     elif  name=="Exit" :
         exit(0)
     else :
         print("item: ",name, " non reconnu")
 
+def save_action():
+    print("save_action()")
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+
+    try:
+        signal_id = model.get_name()
+        frequency = model.get_frequency()
+        magnitude = model.get_magnitude()
+        samples = model.get_samples()
+        
+        # Update the signals table
+        
+        cursor.execute("""
+            UPDATE signals
+            SET frequency = ?, amplitude = ?, phase = ?
+            WHERE signal_id = ?
+        """, (frequency, magnitude, samples, signal_id))
+        # print(signal_id, frequency, magnitude, samples)
+
+
+        # Insert into the samples table
+        
+        query = "INSERT OR IGNORE INTO samples(signal_id, x, y) VALUES(?,?,?)"
+        for value in signal:
+            # print("value : ", value)
+            cursor.execute(query, (model.get_name(), value[0], value[1]))
+ 
+        
+        # Commit the changes
+        
+        conn.commit()
+        print("Data updated and inserted successfully.")
+    
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+    
+    finally:
+        # Close the connection
+        cursor.close()
+        conn.close()
+        
 def open_action() :
     print("open_action()")
  
@@ -80,7 +126,27 @@ if __name__=="__main__" :
     # Controller
     control=Control(model,view)
     control.layout()
+    control.layout("left")
+    # control.layout("right")
+    # Save database on sqlite3
+    import sqlite3
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    magnitude = model.get_magnitude() if model.get_magnitude() is not None else 0.0
+    samples = model.get_samples() if model.get_samples() is not None else 0
+    cursor.execute(
+        "INSERT OR IGNORE INTO signals(signal_id,frequency,amplitude,phase) VALUES(?,?,?,?)",
+        (model.get_name(), model.get_frequency(), magnitude,samples)
+    )
 
+    query="INSERT OR IGNORE INTO samples(signal_id,x,y) VALUES(?,?,?)"
+    for value in signal :
+        cursor.execute(query,(model.get_name(),value[0],value[1]))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+    
     # # Model
     # model=Generator(name="Y")  # Y signal 
     # model.set_samples(100)

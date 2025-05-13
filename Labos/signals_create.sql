@@ -1,7 +1,9 @@
 DROP TABLE IF EXISTS signals;
 CREATE TABLE signals (
   signal_id CHAR(3) PRIMARY KEY,
-  frequency FLOAT
+  frequency FLOAT,
+  amplitude FLOAT,
+  phase FLOAT
 );
 
 DROP TABLE IF EXISTS samples;
