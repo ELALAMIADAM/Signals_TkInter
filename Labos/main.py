@@ -106,22 +106,16 @@ def load_signal():
     cursor = conn.cursor()
 
     try:
-        # Fetch all available signal IDs
         cursor.execute("SELECT signal_id FROM signals")
         signals = cursor.fetchall()
-
+        
         if not signals:
             print("No signals found in the database.")
             return
+        # Create a list of signal IDs
 
-        # Display available signal IDs to the user
-        signal_options = "\n".join([str(signal[0]) for signal in signals])
-        # print("Available Signal IDs:")
-        # print(signal_options)
-
-        # Prompt the user to select a signal by ID
-        root = tk.Tk()
-        root.withdraw()  # Hide the root window
+        top = tk.Toplevel()
+        top.withdraw()  # Hide the root window
         selected_signal_id = simpledialog.askstring(
             "Select Signal", f"Enter the Signal ID from the following options:\n\n{signal_options}"
         )
@@ -143,19 +137,13 @@ def load_signal():
             return
 
         signal_id, frequency, magnitude, samples_nb = signal
-        # print(f"Loaded Signal: ID={signal_id}, Frequency={frequency}, magnitude={magnitude}, samples_nb={samples_nb}")
-
-        # Fetch associated samples
-        cursor.execute("""
-            SELECT x, y
-            FROM samples
-            WHERE signal_id = ?
-        """, (signal_id,))
-        samples = cursor.fetchall()
 
         model.set_samples(samples_nb)
         model.set_magnitude(magnitude)
         model.set_frequency(frequency)
+        control.magn.set(magnitude)
+        control.samp.set(samples_nb)
+        control.freq.set(frequency)
 
         print(samples_nb)
         print(model.get_magnitude())
