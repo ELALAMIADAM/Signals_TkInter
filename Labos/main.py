@@ -1,5 +1,8 @@
 # coding: utf-8
 import sys
+import sqlite3
+import tkinter as tk
+from tkinter import simpledialog
 major=sys.version_info.major
 minor=sys.version_info.minor
 if major==2 and minor==7 :
@@ -25,6 +28,8 @@ def menu_file(menubar) :
     menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
     item="Save"
     menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
+    item="load"
+    menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
     item="Exit"
     menu.add_command(label=item, command=lambda name=item: on_file_actions(name))
     menubar.add_cascade(label="File",menu=menu)
@@ -45,54 +50,142 @@ def on_file_actions(name):
     if  name=="Open" :
         open_action()
     elif  name=="Save" :
-        save_action()
+        save_signal()
+    elif  name=="load" :
+        load_signal()
     elif  name=="Exit" :
         exit(0)
     else :
         print("item: ",name, " non reconnu")
 
-def save_action():
-    print("save_action()")
+
+
+def save_signal():
+    # Prompt the user for the signal name
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
+    signal_id = simpledialog.askstring("Signal Name", "Enter the name of the signal:")
+
+    if not signal_id:
+        print("Signal save operation canceled. No name provided.")
+        return
+
+    # Get signal data from the model
+    magnitude = model.get_magnitude() if model.get_magnitude() is not None else 0.0
+    samples_nb = model.get_samples() if model.get_samples() is not None else []
+    frequency = model.get_frequency()
+
+    # Save the signal to the database
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    try:
+        # Insert into signals table (signal_id is auto-generated)
+        cursor.execute("""
+            INSERT INTO signals (signal_id, frequency, magnitude, samples_nb)
+            VALUES (?, ?, ?, ?)
+        """, (signal_id, frequency, magnitude, samples_nb))
+        
+        # Insert into samples table
+        query = "INSERT INTO samples (signal_id, x, y) VALUES (?, ?, ?)"
+        for value in signal:
+            cursor.execute(query, (signal_id, value[0], value[1]))
+
+
+        
+        conn.commit()
+        print(f"Signal '{signal_id}' saved successfully.")
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def load_signal():
     conn = sqlite3.connect("app.db")
     cursor = conn.cursor()
 
     try:
-        signal_id = model.get_name()
-        frequency = model.get_frequency()
-        magnitude = model.get_magnitude()
-        samples = model.get_samples()
-        
-        # Update the signals table
-        
+        # Fetch all available signal IDs
+        cursor.execute("SELECT signal_id FROM signals")
+        signals = cursor.fetchall()
+
+        if not signals:
+            print("No signals found in the database.")
+            return
+
+        # Display available signal IDs to the user
+        signal_options = "\n".join([str(signal[0]) for signal in signals])
+        # print("Available Signal IDs:")
+        # print(signal_options)
+
+        # Prompt the user to select a signal by ID
+        root = tk.Tk()
+        root.withdraw()  # Hide the root window
+        selected_signal_id = simpledialog.askstring(
+            "Select Signal", f"Enter the Signal ID from the following options:\n\n{signal_options}"
+        )
+
+        if not selected_signal_id:
+            print("Signal load operation canceled. No ID provided.")
+            return
+
+        # Fetch the selected signal's metadata
         cursor.execute("""
-            UPDATE signals
-            SET frequency = ?, amplitude = ?, phase = ?
+            SELECT signal_id, frequency, magnitude, samples_nb
+            FROM signals
             WHERE signal_id = ?
-        """, (frequency, magnitude, samples, signal_id))
-        # print(signal_id, frequency, magnitude, samples)
+        """, (selected_signal_id,))
+        signal = cursor.fetchone()
 
+        if not signal:
+            print(f"Signal with ID '{selected_signal_id}' not found.")
+            return
 
-        # Insert into the samples table
-        
-        query = "INSERT OR IGNORE INTO samples(signal_id, x, y) VALUES(?,?,?)"
+        signal_id, frequency, magnitude, samples_nb = signal
+        # print(f"Loaded Signal: ID={signal_id}, Frequency={frequency}, magnitude={magnitude}, samples_nb={samples_nb}")
+
+        # Fetch associated samples
+        cursor.execute("""
+            SELECT x, y
+            FROM samples
+            WHERE signal_id = ?
+        """, (signal_id,))
+        samples = cursor.fetchall()
+
+        model.set_samples(samples_nb)
+        model.set_magnitude(magnitude)
+        model.set_frequency(frequency)
+
+        print(samples_nb)
+        print(model.get_magnitude())
+        print(model.get_frequency())
+        model.generate()  
+
+        # # Update the signal parameters in the database
+        query = """
+            UPDATE signals
+            SET frequency = ?, magnitude = ?, samples_nb = ?
+            WHERE signal_id = ?
+        """
+        cursor.execute(query, (model.get_frequency(), model.get_magnitude(), model.get_samples(), signal_id))
+
+        # # Delete old samples associated with the signal
+        query = "DELETE FROM samples WHERE signal_id = ?"
+        cursor.execute(query, (signal_id,))
+
+        # Insert new samples generated by the model
         for value in signal:
-            # print("value : ", value)
-            cursor.execute(query, (model.get_name(), value[0], value[1]))
- 
-        
-        # Commit the changes
+            cursor.execute("INSERT OR IGNORE INTO samples(signal_id, x, y) VALUES(?, ?, ?)", (signal_id, value[0], value[1]))
 
-        conn.commit()
-        print("Data updated and inserted successfully.")
-    
     except sqlite3.Error as e:
         print("SQLite error:", e)
-    
     finally:
-        # Close the connection
         cursor.close()
         conn.close()
-        
+
+
+
 def open_action() :
     print("open_action()")
  
@@ -101,9 +194,41 @@ def on_help_actions(name):
     if  name=="About Us" :
         tk.messagebox.showinfo(title=name, message="Contacts",detail="a3elalam@enib.fr, m2mohama@enib.fr")
     elif name=="About Application" :
-        print(name)
+        description = (
+        "This application is a graphical user interface (GUI) for visualizing, controlling, "
+        "and saving data related to harmonic vibratory motion models. It is built using the "
+        "TkInter library and follows design patterns such as Observer and MVC to separate the "
+        "model, view, and controller components.\n\n"
+        "Features include:\n"
+        "- Visualization of signals and their parameters (frequency, magnitude, samples_nb, etc.)\n"
+        "- Real-time updates using the Observer pattern\n"
+        "- Database integration for saving and loading signal data\n"
+        "- User-friendly controls for modifying signal properties\n"
+        "- Support for multiple views and signal comparisons\n"
+        "- Menu options for file operations and application information\n"
+        "- Customizable interface with configuration options\n"
+        "- Signal plotting using Matplotlib\n\n"
+        "This application is designed for educational purposes to demonstrate good programming "
+        "practices and the use of design patterns in GUI development."
+        )
+        tk.messagebox.showinfo("Application Information", description)
+
     elif  name=="About TkInter" :
-        print(name)
+        description = (
+        "TkInter is the standard Python library for creating graphical user interfaces (GUIs). "
+        "It provides a robust and easy-to-use framework for building desktop applications. "
+        "TkInter is built on top of the Tk GUI toolkit, which is cross-platform and works on Windows, macOS, and Linux.\n\n"
+        "Key Features of TkInter:\n"
+        "- Widgets: Includes a variety of widgets such as buttons, labels, text boxes, sliders, menus, and more.\n"
+        "- Layout Management: Supports multiple layout managers (pack, grid, and place) for arranging widgets.\n"
+        "- Event Handling: Provides mechanisms to handle user interactions like button clicks, key presses, etc.\n"
+        "- Customization: Allows customization of widget properties such as colors, fonts, and styles.\n"
+        "- Extensibility: Can be extended with additional libraries like ttk for themed widgets and Matplotlib for plotting.\n\n"
+        "TkInter is widely used for educational purposes, prototyping, and lightweight desktop applications. "
+        "It is included with Python, making it accessible without requiring additional installations."
+        )
+        tk.messagebox.showinfo("About TkInter", description)
+
     else :
         print("item: ",name, " non reconnu")
 
@@ -129,23 +254,7 @@ if __name__=="__main__" :
     control.layout("left")
     # control.layout("right")
     # Save database on sqlite3
-    import sqlite3
-    conn = sqlite3.connect("app.db")
-    cursor = conn.cursor()
-    magnitude = model.get_magnitude() if model.get_magnitude() is not None else 0.0
-    samples = model.get_samples() if model.get_samples() is not None else 0
-    cursor.execute(
-        "INSERT OR IGNORE INTO signals(signal_id,frequency,amplitude,phase) VALUES(?,?,?,?)",
-        (model.get_name(), model.get_frequency(), magnitude,samples)
-    )
-
-    query="INSERT OR IGNORE INTO samples(signal_id,x,y) VALUES(?,?,?)"
-    for value in signal :
-        cursor.execute(query,(model.get_name(),value[0],value[1]))
-    conn.commit()
-
-    cursor.close()
-    conn.close()
+    
     
     # # Model
     # model=Generator(name="Y")  # Y signal 

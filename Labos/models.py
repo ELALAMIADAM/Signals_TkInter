@@ -96,13 +96,13 @@ if   __name__ == "__main__" :
     #  - DELETE values from "samples" table on model.get_name()==signal_id
     
     # REDO above INSERT queries  on "samples" table
-    # model.set_samples(1000)
-    # model.set_frequency(5)
-    # signal = model.generate()  
-    # query="UPDATE signals SET frequency=? WHERE signal_id=?"
-    # cursor.execute(query, (model.get_frequency(), model.get_name()))
-    # query="DELETE FROM samples WHERE signal_id=?"
-    # cursor.execute(query, (model.get_name(),))
+    model.set_samples(1000)
+    model.set_frequency(5)
+    signal = model.generate()  
+    query="UPDATE signals SET frequency=? WHERE signal_id=?"
+    cursor.execute(query, (model.get_frequency(), model.get_name()))
+    query="DELETE FROM samples WHERE signal_id=?"
+    cursor.execute(query, (model.get_name(),))
 
     for value in signal:
         cursor.execute("INSERT OR IGNORE INTO samples(signal_id,x,y) VALUES(?,?,?)", (model.get_name(), value[0], value[1]))
